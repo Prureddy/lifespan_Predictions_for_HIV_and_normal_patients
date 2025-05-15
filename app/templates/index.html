@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Life span prediction for HIV Patients and health advisory</title>
+  <!-- Bootstrap CSS -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  />
+  <!-- Markdown parser -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <!-- FontAwesome Icons -->
+  <script src="https://kit.fontawesome.com/a2d9b6e3b4.js" crossorigin="anonymous"></script>
+  <style>
+    body {
+      padding-top: 70px;
+      background: #f8f9fa;
+      scroll-behavior: smooth;
+    }
+    .dark-mode {
+      background: #121212 !important;
+      color: #e1e1e1 !important;
+    }
+    .dark-mode .container {
+      background: #1e1e1e !important;
+    }
+    .dark-mode .navbar {
+      background: #1f1f1f !important;
+    }
+    .dark-mode .navbar .nav-link,
+    .dark-mode .navbar-brand {
+      color: #e1e1e1 !important;
+    }
+    .dark-mode .footer {
+      background: #1f1f1f !important;
+    }
+    .advice {
+      background: #e9ecef;
+      padding: 1rem;
+      border-radius: .25rem;
+      opacity: 0;
+      animation: fadeIn 0.8s forwards;
+    }
+    .dark-mode .advice {
+      background: #2a2a2a !important;
+    }
+    @keyframes fadeIn {
+      to { opacity: 1; }
+    }
+    #toTop {
+      position: fixed;
+      bottom: 2rem;
+      right: 1rem;
+      display: none;
+      z-index: 1050;
+    }
+    /* Spinner overlay */
+    #spinner-overlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      background: rgba(0,0,0,0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+    }
+  </style>
+</head>
+<body>
+  <!-- Spinner Overlay -->
+  <div id="spinner-overlay">
+    <div class="spinner-border text-light" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+  </div>
+
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top shadow-sm">
+    <div class="container">
+      <a class="navbar-brand" href="#">🩺 Health Advisor for Normal and HIV Patients</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navMenu">
+        <ul class="navbar-nav ms-auto align-items-center">
+          <li class="nav-item">
+            <button class="nav-link {% if request.form.get('user_type','normal')=='normal' %}active{% endif %}"
+                    data-bs-toggle="tab" data-bs-target="#normal" type="button">
+              Normal User
+            </button>
+          </li>
+          <li class="nav-item">
+            <button class="nav-link {% if request.form.get('user_type')=='hiv' %}active{% endif %}"
+                    data-bs-toggle="tab" data-bs-target="#hiv" type="button">
+              HIV Patient
+            </button>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#disclaimer" data-bs-toggle="modal">Disclaimer</a>
+          </li>
+          <li class="nav-item">
+            <button id="darkModeToggle" class="btn nav-link">
+              <i class="fas fa-moon"></i>
+            </button>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Global Warning -->
+  <div class="alert alert-warning alert-dismissible fade show mb-0 text-center" role="alert">
+    🚨 <strong>Note:</strong> This tool provides informational predictions only. Always consult a healthcare professional.
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+
+  <main class="container my-4">
+    <h1 class="mb-4 text-center">Life span prediction for HIV Patients and health advisory</h1>
+
+    <!-- Tabs -->
+    <ul class="nav nav-tabs justify-content-center" role="tablist">
+      <li class="nav-item">
+        <button class="nav-link {% if request.form.get('user_type','normal')=='normal' %}active{% endif %}"
+                data-bs-toggle="tab" data-bs-target="#normal" type="button">
+          Normal User
+        </button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link {% if request.form.get('user_type')=='hiv' %}active{% endif %}"
+                data-bs-toggle="tab" data-bs-target="#hiv" type="button">
+          HIV Patient
+        </button>
+      </li>
+    </ul>
+
+    <div class="tab-content mt-4">
+      <!-- Normal User Tab -->
+      <div class="tab-pane fade {% if request.form.get('user_type','normal')=='normal' %}show active{% endif %}"
+           id="normal" role="tabpanel">
+        <form id="normalForm" method="POST" class="row g-3">
+          <input type="hidden" name="user_type" value="normal"/>
+          <div class="col-md-3">
+            <label class="form-label">Year (1980–2025)</label>
+            <input name="year" type="number" class="form-control" min="1980" max="2025"
+                   value="{{ request.form.get('year', 2020) }}"
+                   data-bs-toggle="tooltip" title="Select the year of prediction." required />
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Status (0–1)</label>
+            <input name="status" type="number" class="form-control" min="0" max="1" step="any"
+                   value="{{ request.form.get('status', 1) }}"
+                   data-bs-toggle="tooltip" title="0 = lowest development, 1 = highest." required />
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Adult Mortality (0–2000)</label>
+            <input name="adult_mortality" type="number" step="any" class="form-control"
+                   min="0" max="2000" value="{{ request.form.get('adult_mortality', 100) }}"
+                   data-bs-toggle="tooltip" title="Deaths per 1000 adults." required />
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Alcohol (0–20)</label>
+            <input name="alcohol" type="number" step="any" class="form-control" min="0" max="20"
+                   value="{{ request.form.get('alcohol', 5) }}"
+                   data-bs-toggle="tooltip" title="Liters per capita." required />
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Hepatitis B (0–100)</label>
+            <input name="hepatitis_b" type="number" step="any" class="form-control"
+                   min="0" max="100" value="{{ request.form.get('hepatitis_b', 80) }}"
+                   data-bs-toggle="tooltip" title="Vaccination coverage %." required />
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Measles (0–100000)</label>
+            <input name="measles" type="number" class="form-control" min="0" max="100000"
+                   value="{{ request.form.get('measles', 200) }}"
+                   data-bs-toggle="tooltip" title="Cases per year." required />
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">BMI (0–100)</label>
+            <input name="bmi" type="number" step="any" class="form-control" min="0" max="100"
+                   value="{{ request.form.get('bmi', 25) }}"
+                   data-bs-toggle="tooltip" title="Body Mass Index." required />
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Under-Five Deaths (0–1000)</label>
+            <input name="under_five_deaths" type="number" class="form-control"
+                   min="0" max="1000" value="{{ request.form.get('under_five_deaths', 10) }}"
+                   data-bs-toggle="tooltip" title="Deaths under age 5 per 1000." required />
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Polio (0–100)</label>
+            <input name="polio" type="number" step="any" class="form-control"
+                   min="0" max="100" value="{{ request.form.get('polio', 90) }}"
+                   data-bs-toggle="tooltip" title="Vaccination coverage %." required />
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Total Expenditure (0–20)</label>
+            <input name="total_expenditure" type="number" step="any" class="form-control"
+                   min="0" max="20" value="{{ request.form.get('total_expenditure', 5) }}"
+                   data-bs-toggle="tooltip" title="% of GDP." required />
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Diphtheria (0–100)</label>
+            <input name="diphtheria" type="number" step="any" class="form-control"
+                   min="0" max="100" value="{{ request.form.get('diphtheria', 95) }}"
+                   data-bs-toggle="tooltip" title="Vaccination coverage %." required />
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">HIV/AIDS Marker (0–50)</label>
+            <input name="hiv_aids" type="number" step="any" class="form-control"
+                   min="0" max="50" value="{{ request.form.get('hiv_aids', 0) }}"
+                   data-bs-toggle="tooltip" title="Prevalence rate %." required />
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">GDP (0–50000)</label>
+            <input name="gdp" type="number" step="any" class="form-control"
+                   min="0" max="50000" value="{{ request.form.get('gdp', 10000) }}"
+                   data-bs-toggle="tooltip" title="Per capita USD." required />
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Population (0–1e9)</label>
+            <input name="population" type="number" step="any" class="form-control"
+                   min="0" max="1000000000" value="{{ request.form.get('population', 5000000) }}"
+                   data-bs-toggle="tooltip" title="Total population." required />
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Thinness 1–19 Years (0–50)</label>
+            <input name="thinness_1_19_years" type="number" step="any" class="form-control"
+                   min="0" max="50" value="{{ request.form.get('thinness_1_19_years', 10) }}"
+                   data-bs-toggle="tooltip" title="BMI <18.5 %." required />
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Income Composition (0–1)</label>
+            <input name="income_composition" type="number" step="any" class="form-control"
+                   min="0" max="1" value="{{ request.form.get('income_composition', 0.5) }}"
+                   data-bs-toggle="tooltip" title="Human Development Index component." required />
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Schooling (0–20)</label>
+            <input name="schooling" type="number" step="any" class="form-control"
+                   min="0" max="20" value="{{ request.form.get('schooling', 12) }}"
+                   data-bs-toggle="tooltip" title="Average years of schooling." required />
+          </div>
+          <div class="col-12 text-center">
+            <button type="submit" class="btn btn-success px-5">
+              <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" style="display:none;"></span>
+              <i class="fas fa-chart-line"></i> Predict + Advice
+            </button>
+          </div>
+        </form>
+
+        {% if normal_result is not none %}
+          <hr class="my-4"/>
+          <h4 class="text-center">Predicted Life Expectancy: <strong>{{ normal_result }} yrs</strong></h4>
+          <h5 class="mt-3">Suggestions to Increase Lifespan:</h5>
+          <div id="normal-advice-div" class="advice mb-3"></div>
+          <div class="text-end">
+            <button class="btn btn-outline-secondary" onclick="downloadReport('normal_advice.md', normalAdviceMd)">
+              <i class="fas fa-download"></i> Download Report
+            </button>
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- HIV Patient Tab -->
+      <div class="tab-pane fade {% if request.form.get('user_type')=='hiv' %}show active{% endif %}"
+           id="hiv" role="tabpanel">
+        <form id="hivForm" method="POST" class="row g-3">
+          <input type="hidden" name="user_type" value="hiv"/>
+          <div class="col-md-6">
+            <label class="form-label">HIV Stage</label>
+            <select name="hiv_stage" class="form-select"
+                    data-bs-toggle="tooltip" title="Choose the current clinical stage." required>
+              <option value="">— select stage —</option>
+              <option {% if request.form.get('hiv_stage')=='Stage 1' %}selected{% endif %}>Stage 1</option>
+              <option {% if request.form.get('hiv_stage')=='Stage 2' %}selected{% endif %}>Stage 2</option>
+              <option {% if request.form.get('hiv_stage')=='Stage 3' %}selected{% endif %}>Stage 3</option>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">CD4 Count (0–2000)</label>
+            <input name="cd4_count" type="number" class="form-control"
+                   min="0" max="2000" step="any" value="{{ request.form.get('cd4_count', 500) }}"
+                   data-bs-toggle="tooltip" title="Cells/mm³." required />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Viral Load (0–1000000)</label>
+            <input name="viral_load" type="number" class="form-control"
+                   min="0" max="1000000" step="any" value="{{ request.form.get('viral_load', 10000) }}"
+                   data-bs-toggle="tooltip" title="Copies/mL." required />
+          </div>
+          <div class="col-12 text-center">
+            <button type="submit" class="btn btn-primary px-5">
+              <i class="fas fa-user-shield"></i> Get HIV Advice
+            </button>
+          </div>
+        </form>
+
+        {% if hiv_advice %}
+          <hr class="my-4"/>
+          <h5 class="mt-3">HIV-Specific Recommendations:</h5>
+          <div id="hiv-advice-div" class="advice mb-3"></div>
+          <div class="text-end">
+            <button class="btn btn-outline-secondary" onclick="downloadReport('hiv_advice.md', hivAdviceMd)">
+              <i class="fas fa-download"></i> Download Report
+            </button>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </main>
+
+  <!-- Toast Container -->
+  <div class="toast-container position-fixed bottom-0 end-0 p-3"></div>
+
+  <!-- Scroll to Top Button -->
+  <button id="toTop" class="btn btn-lg btn-primary">
+    <i class="fas fa-chevron-up"></i>
+  </button>
+
+  <!-- Disclaimer Modal -->
+  <div class="modal fade" id="disclaimerModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Disclaimer</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p>This tool is for educational and informational purposes only and not a substitute for professional medical advice.</p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer bg-dark text-white text-center py-3 mt-auto">
+    <div>© 2025 HealthAdvisor • <a href="#disclaimer" class="text-warning" data-bs-toggle="modal">Disclaimer</a></div>
+    <div>
+      <a href="#" class="text-light me-2"><i class="fab fa-twitter"></i></a>
+      <a href="#" class="text-light me-2"><i class="fab fa-linkedin"></i></a>
+      <a href="#" class="text-light"><i class="fab fa-github"></i></a>
+    </div>
+  </footer>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Grab server data
+    const normalAdviceMd = {{ normal_advice|default(None)|tojson }};
+    const hivAdviceMd    = {{ hiv_advice   |default(None)|tojson }};
+
+    document.addEventListener('DOMContentLoaded', () => {
+      // Tooltips
+      document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
+        new bootstrap.Tooltip(el);
+      });
+
+      // Render advice
+      if (normalAdviceMd) {
+        document.getElementById('normal-advice-div').innerHTML = marked.parse(normalAdviceMd);
+      }
+      if (hivAdviceMd) {
+        document.getElementById('hiv-advice-div').innerHTML = marked.parse(hivAdviceMd);
+      }
+
+      // Spinner + toast on submit
+      ['normalForm','hivForm'].forEach(id => {
+        const form = document.getElementById(id);
+        form.addEventListener('submit', e => {
+          // show spinner
+          document.getElementById('spinner-overlay').style.display = 'flex';
+          // show toast
+          const t = document.createElement('div');
+          t.className = 'toast align-items-center text-bg-primary border-0';
+          t.innerHTML = `
+            <div class="d-flex">
+              <div class="toast-body"><i class="fas fa-cog fa-spin me-2"></i>Processing…</div>
+              <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>`;
+          document.querySelector('.toast-container').append(t);
+          new bootstrap.Toast(t, { delay: 3000 }).show();
+        });
+      });
+
+      // Scroll-to-top
+      const toTop = document.getElementById('toTop');
+      window.addEventListener('scroll', () => {
+        toTop.style.display = window.scrollY > 300 ? 'block' : 'none';
+      });
+      toTop.addEventListener('click', () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+
+      // Dark mode toggle
+      const dm = document.getElementById('darkModeToggle');
+      dm.addEventListener('click', () => {
+        document.body.classList.toggle('dark-mode');
+        const icon = dm.querySelector('i');
+        icon.classList.toggle('fa-moon');
+        icon.classList.toggle('fa-sun');
+      });
+    });
+
+    // Download report
+    function downloadReport(filename, content) {
+      const blob = new Blob([content], { type: 'text/markdown' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename; a.click();
+      URL.revokeObjectURL(url);
+    }
+  </script>
+</body>
+</html>
